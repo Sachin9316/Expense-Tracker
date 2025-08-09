@@ -56,3 +56,43 @@ exports.deleteTransaction = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+
+// Add today's income
+exports.addTodayIncome = async (req, res) => {
+    try {
+        const { amount, description } = req.body;
+        if (!amount || !description) {
+            return res.status(400).json({ error: 'Amount and description are required.' });
+        }
+        const transaction = await TransactionModel.create({
+            amount,
+            description,
+            category: 'Income',
+            date: new Date()
+        });
+        res.status(201).json(transaction);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+};
+
+// Get overall balance (profit)
+exports.getBalance = async (req, res) => {
+    try {
+        const transactions = await TransactionModel.find();
+        let income = 0;
+        let expense = 0;
+        transactions.forEach(tx => {
+            if (tx.category.toLowerCase() === 'income') {
+                income += tx.amount;
+            } else {
+                expense += tx.amount;
+            }
+        });
+        const balance = income - expense;
+        res.json({ balance });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
