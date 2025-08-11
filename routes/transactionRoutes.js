@@ -2,11 +2,9 @@ const express = require('express');
 const router = express.Router();
 const transactionController = require('../controllers/transactionController');
 
-// Specific routes first
+// Specific routes first (order matters!)
 router.post('/income-today', transactionController.addTodayIncome);
 router.get('/balance', transactionController.getBalance);
-
-// New route for date filter
 router.get('/date', transactionController.getTransactionsByDate);
 
 // CRUD routes
