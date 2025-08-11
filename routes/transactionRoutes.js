@@ -6,6 +6,9 @@ const transactionController = require('../controllers/transactionController');
 router.post('/income-today', transactionController.addTodayIncome);
 router.get('/balance', transactionController.getBalance);
 
+// New route for date filter
+router.get('/date', transactionController.getTransactionsByDate);
+
 // CRUD routes
 router.post('/', transactionController.createTransaction);
 router.get('/', transactionController.getTransactions);

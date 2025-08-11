@@ -1,6 +1,5 @@
 const TransactionModel = require('../models/TransactionModel');
 
-// Create a transaction
 exports.createTransaction = async (req, res) => {
     try {
         const transaction = await TransactionModel.create(req.body);
@@ -77,21 +76,70 @@ exports.addTodayIncome = async (req, res) => {
     }
 };
 
-// Get overall balance (profit)
+// Get balance (today or all time)
 exports.getBalance = async (req, res) => {
     try {
-        const transactions = await TransactionModel.find();
+        const { date } = req.query;
+
+        let filter = {};
+
+        if (date && date.toLowerCase() === 'today') {
+            const today = new Date();
+            const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+            const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+            filter.date = { $gte: startOfDay, $lte: endOfDay };
+        }
+
+        const transactions = await TransactionModel.find(filter);
+
         let income = 0;
         let expense = 0;
+
         transactions.forEach(tx => {
-            if (tx.category.toLowerCase() === 'income') {
+            if (tx.category && tx.category.toLowerCase() === 'income') {
                 income += tx.amount;
             } else {
                 expense += tx.amount;
             }
         });
+
         const balance = income - expense;
-        res.json({ balance });
+        const status = balance >= 0 ? 'profit' : 'loss';
+
+        res.json({
+            filterType: date && date.toLowerCase() === 'today' ? 'today' : 'all-time',
+            income,
+            expense,
+            balance,
+            status
+        });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+
+exports.getTransactionsByDate = async (req, res) => {
+    try {
+        let { date } = req.query;
+
+        if (!date) {
+            const today = new Date();
+            date = today.toISOString().split("T")[0];
+        }
+
+        const startOfDay = new Date(date);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(date);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const transactions = await TransactionModel.find({
+            date: { $gte: startOfDay, $lte: endOfDay }
+        });
+
+        res.json(transactions);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
