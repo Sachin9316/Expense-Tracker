@@ -76,19 +76,21 @@ exports.addTodayIncome = async (req, res) => {
     }
 };
 
-// Get balance (today or all time)
+// Lifetime or today balance
 exports.getBalance = async (req, res) => {
     try {
         const { date } = req.query;
 
         let filter = {};
 
+        // If user passes date=today, filter to today's transactions
         if (date && date.toLowerCase() === 'today') {
             const today = new Date();
             const startOfDay = new Date(today.setHours(0, 0, 0, 0));
             const endOfDay = new Date(today.setHours(23, 59, 59, 999));
             filter.date = { $gte: startOfDay, $lte: endOfDay };
         }
+        // Else → no filter → lifetime profit
 
         const transactions = await TransactionModel.find(filter);
 
@@ -96,9 +98,9 @@ exports.getBalance = async (req, res) => {
         let expense = 0;
 
         transactions.forEach(tx => {
-            if (tx.category && tx.category.toLowerCase() === 'income') {
+            if (tx.category?.toLowerCase() === 'income') {
                 income += tx.amount;
-            } else {
+            } else if (tx.category?.toLowerCase() === 'expense') {
                 expense += tx.amount;
             }
         });
@@ -107,7 +109,7 @@ exports.getBalance = async (req, res) => {
         const status = balance >= 0 ? 'profit' : 'loss';
 
         res.json({
-            filterType: date && date.toLowerCase() === 'today' ? 'today' : 'all-time',
+            filterType: date && date.toLowerCase() === 'today' ? 'today' : 'lifetime',
             income,
             expense,
             balance,
@@ -119,10 +121,9 @@ exports.getBalance = async (req, res) => {
     }
 };
 
-
 exports.getTransactionsByDate = async (req, res) => {
     try {
-        let { date } = req.query;
+        let { date, type } = req.query;
 
         if (!date) {
             const today = new Date();
@@ -135,11 +136,16 @@ exports.getTransactionsByDate = async (req, res) => {
         const endOfDay = new Date(date);
         endOfDay.setHours(23, 59, 59, 999);
 
-        const transactions = await TransactionModel.find({
-            date: { $gte: startOfDay, $lte: endOfDay }
-        });
+        let filter = { date: { $gte: startOfDay, $lte: endOfDay } };
 
+        // If type=expense, filter only expenses
+        if (type && type.toLowerCase() === 'expense') {
+            filter.category = 'Expense';
+        }
+
+        const transactions = await TransactionModel.find(filter);
         res.json(transactions);
+
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
